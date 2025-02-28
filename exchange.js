@@ -1,9 +1,9 @@
 const { Connection, PublicKey, Keypair, Transaction } = require('@solana/web3.js');
-
+const { TOKEN_PROGRAM_ID, Token } = require('@solana/spl-token');
 
 // Підключення до Solana через Ankr
 const SOLANA_RPC_URL = "https://rpc.ankr.com/solana";  // Використовуємо Ankr для підключення до Solana
-
+const connection = new Connection(SOLANA_RPC_URL, 'confirmed');
 
 // Використовуємо секретний ключ для облікового запису
 const SERVICE_WALLET_SECRET = process.env.SERVICE_WALLET_SECRET; // Ви можете зберігати секрет в змінній середовища
