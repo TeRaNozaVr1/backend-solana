@@ -17,7 +17,7 @@ const TOKEN_ACCOUNT = new PublicKey("4ofLfgCmaJYC233vTGv78WFD4AfezzcMiViu26dF3cV
 exports.handler = async (event, context) => {
   // Встановлюємо CORS заголовки
   const headers = {
-    "Access-Control-Allow-Origin": "https://yaroslavs-marvelous-site-76b7ab.webflow.io",  // Дозволяє доступ з будь-якої доменної зони
+    "Access-Control-Allow-Origin": "*",  // Дозволяє доступ з будь-якої доменної зони
     "Access-Control-Allow-Methods": "GET, POST, OPTIONS",  // Дозволяє запити GET, POST та OPTIONS
     "Access-Control-Allow-Headers": "Content-Type, Authorization"  // Дозволяє вказані заголовки
   };
@@ -31,9 +31,9 @@ exports.handler = async (event, context) => {
   }
 
   // Отримуємо дані з тіла запиту
-  const { amount, tokenType } = JSON.parse(event.body);
+  const { amount, tokenType, walletAddress } = JSON.parse(event.body);
 
-  if (!amount || !tokenType) {
+  if (!amount || !tokenType || !walletAddress) {
     return {
       statusCode: 400,
       body: JSON.stringify({ error: 'Missing required parameters' }),
@@ -63,12 +63,13 @@ exports.handler = async (event, context) => {
 
     // Отримуємо обліковий запис для токену
     const fromTokenAccount = await token.getOrCreateAssociatedAccountInfo(serviceWallet.publicKey);
+    const toTokenAccount = await token.getOrCreateAssociatedAccountInfo(new PublicKey(walletAddress));
 
     // Створюємо операцію для переведення токенів SPL
     const transferTransaction = Token.createTransferInstruction(
       TOKEN_PROGRAM_ID,
       fromTokenAccount.address,
-      TOKEN_ACCOUNT,
+      toTokenAccount.address,
       serviceWallet.publicKey,
       [],
       amount * 1_000_000  // Припускаємо, що 1 USDT або 1 USDC = 1_000_000 lamports (1 токен)
