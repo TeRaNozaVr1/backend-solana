@@ -1,7 +1,9 @@
 [build]
-  command = "npm run build"
-  publish = "dist"
+  functions = "netlify/"  # Шлях до вашої функції
 
-[dev]
-  command = "npm run dev"
-  port = 3000
+[[headers]]
+for = "/netlify/*"
+  [headers.values]
+  Access-Control-Allow-Origin = "*"
+  Access-Control-Allow-Methods = "GET, POST, OPTIONS"
+  Access-Control-Allow-Headers = "Content-Type, Authorization"
