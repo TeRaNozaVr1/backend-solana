@@ -1,0 +1,8 @@
+{
+    "name": "solana-backend",
+    "version": "1.0.0",
+    "main": "index.js",
+    "dependencies": {
+        "@solana/web3.js": "^1.98.0"
+    }
+}
