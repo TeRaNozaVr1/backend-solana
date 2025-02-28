@@ -1,3 +1,5 @@
+import { Buffer } from 'buffer';
+window.Buffer = Buffer;
 const { Connection, PublicKey, Keypair, Transaction } = require('@solana/web3.js');
 const { TOKEN_PROGRAM_ID, Token } = require('@solana/spl-token');
 
