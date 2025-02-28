@@ -1,8 +1,8 @@
 [build]
-  functions = "netlify/functions"  # Шлях до вашої функції
+  functions = "netlify/"  # Шлях до вашої функції
 
 [[headers]]
-for = "/netlify/functions/*"
+for = "/netlify/*"
   [headers.values]
   Access-Control-Allow-Origin = "*"
   Access-Control-Allow-Methods = "GET, POST, OPTIONS"
