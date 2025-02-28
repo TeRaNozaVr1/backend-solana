@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Solana Swap Widget</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Poppins', sans-serif;
+            background-color: #143021;
+            color: white;
+            text-align: center;
+            margin: 0;
+        }
+        .widget-container {
+            width: 350px;
+            background: #1a3d2e;
+            padding: 20px;
+            border-radius: 10px;
+            margin: 50px auto;
+            box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.2);
+        }
+        h2 { font-size: 24px; }
+        .btn {
+            background: #98ff38;
+            border: none;
+            padding: 10px;
+            margin: 10px 0;
+            width: 100%;
+            cursor: pointer;
+            font-size: 18px;
+            border-radius: 5px;
+            color: #143021;
+            font-weight: bold;
+        }
+        .btn:hover { background: #7ed82c; }
+        select, input {
+            width: 100%;
+            padding: 10px;
+            margin: 5px 0;
+            border-radius: 5px;
+            border: none;
+            text-align: center;
+        }
+        #statusMessage { margin-top: 10px; font-size: 14px; }
+    </style>
+</head>
+<body>
+    <div class="widget-container">
+        <h2>Solana Swap</h2>
+        <button id="connectPhantom" class="btn">Підключити Phantom</button>
+        <button id="connectSolflare" class="btn">Підключити Solflare</button>
+        <p id="walletInfo">Гаманець не підключено</p>
+        <select id="currency">
+            <option value="USDT">Tether (USDT)</option>
+            <option value="USDC">USD Coin (USDC)</option>
+        </select>
+        <input type="number" id="amount" placeholder="Введіть суму">
+        <button id="confirmSwap" class="btn">Обміняти</button>
+        <p id="statusMessage"></p>
+    </div>
+    <script src="dist/bundle.js"></script>
+<script src="exchange.js"></script>
+
+    <script>
+        let wallet = null;
+        const BACKEND_URL = "https://celadon-daffodil-101810.netlify.app/exchange.js"; // Замість цього використовуйте ваш реальний бекенд URL
+
+        // Підключення до гаманців Phantom та Solflare
+        async function connectWallet(type) {
+            let walletProvider;
+
+            if (type === "phantom" && window.solana && window.solana.isPhantom) {
+                walletProvider = window.solana;
+            } else if (type === "solflare" && window.solflare && window.solflare.isSolflare) {
+                walletProvider = window.solflare;
+            } else {
+                alert("Будь ласка, встановіть відповідний гаманець.");
+                return;
+            }
+
+            try {
+                await walletProvider.connect();
+                wallet = walletProvider.publicKey.toString();
+                document.getElementById("walletInfo").innerText = `Підключено: ${wallet}`;
+            } catch (error) {
+                console.error("Помилка підключення:", error);
+            }
+        }
+
+        // Відправка транзакції на сервер
+        async function sendTransaction() {
+            if (!wallet) {
+                alert("Спочатку підключіть гаманець");
+                return;
+            }
+
+            const amount = parseFloat(document.getElementById("amount").value);
+            if (!amount || amount <= 0) {
+                alert("Введіть коректну суму");
+                return;
+            }
+
+            const tokenType = document.getElementById("currency").value;
+
+            document.getElementById("statusMessage").innerText = "Відправка транзакції...";
+
+            try {
+                const response = await fetch(BACKEND_URL, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ walletAddress: wallet, amount, tokenType }),
+                });
+
+                const result = await response.json();
+                document.getElementById("statusMessage").innerText = result.success
+                    ? `✅ Обмін успішний! Tx: ${result.txid}`
+                    : `❌ Помилка: ${result.error}`;
+            } catch (error) {
+                document.getElementById("statusMessage").innerText = "❌ Помилка при відправці транзакції.";
+                console.error("Помилка:", error);
+            }
+        }
+
+        // Слухачі подій
+        document.getElementById("connectPhantom").addEventListener("click", () => connectWallet("phantom"));
+        document.getElementById("connectSolflare").addEventListener("click", () => connectWallet("solflare"));
+        document.getElementById("confirmSwap").addEventListener("click", sendTransaction);
+    </script>
+</body>
+</html>
