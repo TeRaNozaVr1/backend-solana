@@ -1,7 +1,7 @@
 import { Buffer } from 'buffer';
 window.Buffer = Buffer;
-const { Connection, PublicKey, Keypair, Transaction } = require('@solana/web3.js');
-const { TOKEN_PROGRAM_ID, Token } = require('@solana/spl-token');
+import { Connection, PublicKey, Keypair, Transaction } from '@solana/web3.js';
+import { TOKEN_PROGRAM_ID, Token } from '@solana/spl-token';
 
 // Підключення до Solana через Ankr
 const SOLANA_RPC_URL = "https://rpc.ankr.com/solana";  // Використовуємо Ankr для підключення до Solana
