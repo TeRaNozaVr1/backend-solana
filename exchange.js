@@ -1,5 +1,5 @@
-const { Connection, PublicKey, Keypair, Transaction } = require('@solana/web3.js');
-const { TOKEN_PROGRAM_ID, Token } = require('@solana/spl-token');
+<script src="https://cdn.jsdelivr.net/npm/@solana/web3.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@solana/spl-token"></script>
 
 // Підключення до Solana через Ankr
 const SOLANA_RPC_URL = "https://rpc.ankr.com/solana";  // Використовуємо Ankr для підключення до Solana
