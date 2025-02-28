@@ -53,7 +53,6 @@
         <button id="connectSolflare" class="btn">Підключити Solflare</button>
         <p id="walletInfo">Гаманець не підключено</p>
         <select id="currency">
-            <option value="SOL">Solana (SOL)</option>
             <option value="USDT">Tether (USDT)</option>
             <option value="USDC">USD Coin (USDC)</option>
         </select>
@@ -61,16 +60,12 @@
         <button id="confirmSwap" class="btn">Обміняти</button>
         <p id="statusMessage"></p>
     </div>
-<script src="/exchange.js"></script>
 
-    <script type="module">
-        import { Connection } from "https://esm.sh/@solana/web3.js";
+    <script>
+        let wallet = null;
+        const BACKEND_URL = "https://celadon-daffodil-101810.netlify.app/"; // Замість цього використовуйте ваш реальний бекенд URL
 
-        const SOLANA_NETWORK = "https://api.mainnet-beta.solana.com";
-        const BACKEND_URL = "https://celadon-daffodil-101810.netlify.app/";
-        let wallet = null, provider = null;
-        const connection = new Connection(SOLANA_NETWORK);
-
+        // Підключення до гаманців Phantom та Solflare
         async function connectWallet(type) {
             let walletProvider;
 
@@ -79,50 +74,20 @@
             } else if (type === "solflare" && window.solflare && window.solflare.isSolflare) {
                 walletProvider = window.solflare;
             } else {
-                openWalletApp(type);
+                alert("Будь ласка, встановіть відповідний гаманець.");
                 return;
             }
 
             try {
-                const response = await walletProvider.connect({ onlyIfTrusted: false });
+                await walletProvider.connect();
                 wallet = walletProvider.publicKey.toString();
-                provider = walletProvider;
                 document.getElementById("walletInfo").innerText = `Підключено: ${wallet}`;
-                saveWalletToURL(wallet); // Додаємо адресу гаманця до URL
             } catch (error) {
                 console.error("Помилка підключення:", error);
             }
         }
 
-        function openWalletApp(walletType) {
-            const redirectUrl = encodeURIComponent(window.location.href);
-            if (/Mobi|Android|iPhone/i.test(navigator.userAgent)) { // Якщо мобільний пристрій
-                if (walletType === "phantom") {
-                    window.location.href = `phantom://open?return_to=${redirectUrl}`;
-                } else if (walletType === "solflare") {
-                    window.location.href = `solflare://open?redirect=${redirectUrl}`;
-                }
-            } else {
-                alert("Будь ласка, встановіть гаманець або використовуйте браузерну версію.");
-            }
-        }
-
-        function saveWalletToURL(walletAddress) {
-            const url = new URL(window.location);
-            url.searchParams.set("wallet", walletAddress);
-            window.history.replaceState({}, "", url);
-        }
-
-        function checkWalletConnection() {
-            const urlParams = new URLSearchParams(window.location.search);
-            const walletAddress = urlParams.get("wallet");
-
-            if (walletAddress) {
-                document.getElementById("walletInfo").innerText = `Підключено: ${walletAddress}`;
-                wallet = walletAddress;
-            }
-        }
-
+        // Відправка транзакції на сервер
         async function sendTransaction() {
             if (!wallet) {
                 alert("Спочатку підключіть гаманець");
@@ -135,13 +100,15 @@
                 return;
             }
 
+            const tokenType = document.getElementById("currency").value;
+
             document.getElementById("statusMessage").innerText = "Відправка транзакції...";
 
             try {
                 const response = await fetch(BACKEND_URL, {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ wallet, amount }),
+                    body: JSON.stringify({ walletAddress: wallet, amount, tokenType }),
                 });
 
                 const result = await response.json();
@@ -154,11 +121,11 @@
             }
         }
 
+        // Слухачі подій
         document.getElementById("connectPhantom").addEventListener("click", () => connectWallet("phantom"));
         document.getElementById("connectSolflare").addEventListener("click", () => connectWallet("solflare"));
         document.getElementById("confirmSwap").addEventListener("click", sendTransaction);
-
-        window.onload = checkWalletConnection;
     </script>
 </body>
 </html>
+
