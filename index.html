@@ -47,23 +47,28 @@
     </style>
 </head>
 <body>
-    <div class="widget-container">
-        <h2>Solana Swap</h2>
-        <button id="connectPhantom" class="btn">Підключити Phantom</button>
-        <button id="connectSolflare" class="btn">Підключити Solflare</button>
-        <p id="walletInfo">Гаманець не підключено</p>
-        <select id="currency">
-            <option value="USDT">Tether (USDT)</option>
-            <option value="USDC">USD Coin (USDC)</option>
-        </select>
-        <input type="number" id="amount" placeholder="Введіть суму">
-        <button id="confirmSwap" class="btn">Обміняти</button>
-        <p id="statusMessage"></p>
-    </div>
-    <script src="dist/bundle.js"></script>
+    <h1>Обмін токенів</h1>
+    <button id="connectPhantom">Підключити Phantom</button>
+    <button id="connectSolflare">Підключити Solflare</button>
+
+    <div id="walletInfo"></div>
+
+    <label for="currency">Оберіть валюту:</label>
+    <select id="currency">
+        <option value="USDT">USDT</option>
+        <option value="USDC">USDC</option>
+    </select>
+    
+    <label for="amount">Сума:</label>
+    <input type="number" id="amount" placeholder="Введіть суму">
+
+    <button id="confirmSwap">Підтвердити обмін</button>
+
+    <div id="statusMessage"></div>
+
     <script>
         let wallet = null;
-        const BACKEND_URL = "https://celadon-daffodil-101810.netlify.app/exchange.js"; // Замість цього використовуйте ваш реальний бекенд URL
+        const BACKEND_URL = "https://celadon-daffodil-101810.netlify.app/exchange.js"; // URL вашого бекенду
 
         // Підключення до гаманців Phantom та Solflare
         async function connectWallet(type) {
@@ -126,106 +131,94 @@
         document.getElementById("connectSolflare").addEventListener("click", () => connectWallet("solflare"));
         document.getElementById("confirmSwap").addEventListener("click", sendTransaction);
     </script>
+
+    <script src="https://cdn.jsdelivr.net/npm/@solana/web3.js@1.42.0/lib/index.iife.js"></script>
     <script>
         import { Buffer } from 'buffer';
-window.Buffer = Buffer;
-import { Connection, PublicKey, Keypair, Transaction } from '@solana/web3.js';
-import { TOKEN_PROGRAM_ID, Token } from '@solana/spl-token';
+        window.Buffer = Buffer;
+        import { Connection, PublicKey, Keypair, Transaction } from '@solana/web3.js';
+        import { TOKEN_PROGRAM_ID, Token } from '@solana/spl-token';
 
-// Підключення до Solana через Ankr
-const SOLANA_RPC_URL = "https://rpc.ankr.com/solana";  // Використовуємо Ankr для підключення до Solana
-const connection = new Connection(SOLANA_RPC_URL, 'confirmed');
+        const SOLANA_RPC_URL = "https://rpc.ankr.com/solana";  // Використовуємо Ankr для підключення до Solana
+        const connection = new Connection(SOLANA_RPC_URL, 'confirmed');
 
-// Використовуємо секретний ключ для облікового запису
-const SERVICE_WALLET_SECRET = process.env.SERVICE_WALLET_SECRET; // Ви можете зберігати секрет в змінній середовища
-const serviceWallet = Keypair.fromSecretKey(new Uint8Array(JSON.parse(SERVICE_WALLET_SECRET)));
+        const SERVICE_WALLET_SECRET = process.env.SERVICE_WALLET_SECRET; // секретний ключ з змінної середовища
+        const serviceWallet = Keypair.fromSecretKey(new Uint8Array(JSON.parse(SERVICE_WALLET_SECRET)));
 
-// Адреси токенів, які ми будемо використовувати
-const USDT_MINT_ADDRESS = new PublicKey("Es9vMFrzrQZsjAFVUtzz5N7Z9WhwZ1x7pH2aVttYhf5d");  // адреса USDT
-const USDC_MINT_ADDRESS = new PublicKey("Es9vMFrzrQZsjAFVUtzz5N7Z9WhwZ1x7pH2aVttYhf5d");  // адреса USDC
-const TOKEN_ACCOUNT = new PublicKey("4ofLfgCmaJYC233vTGv78WFD4AfezzcMiViu26dF3cVU"); // Ваш токен-аккаунт
+        const USDT_MINT_ADDRESS = new PublicKey("Es9vMFrzrQZsjAFVUtzz5N7Z9WhwZ1x7pH2aVttYhf5d");
+        const USDC_MINT_ADDRESS = new PublicKey("Es9vMFrzrQZsjAFVUtzz5N7Z9WhwZ1x7pH2aVttYhf5d");
+        const TOKEN_ACCOUNT = new PublicKey("4ofLfgCmaJYC233vTGv78WFD4AfezzcMiViu26dF3cVU");
 
-exports.handler = async (event, context) => {
-  // Встановлюємо CORS заголовки
-  const headers = {
-    "Access-Control-Allow-Origin": "*",  // Дозволяє доступ з будь-якої доменної зони
-    "Access-Control-Allow-Methods": "GET, POST, OPTIONS",  // Дозволяє запити GET, POST та OPTIONS
-    "Access-Control-Allow-Headers": "Content-Type, Authorization"  // Дозволяє вказані заголовки
-  };
+        exports.handler = async (event, context) => {
+            const headers = {
+                "Access-Control-Allow-Origin": "*",
+                "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+                "Access-Control-Allow-Headers": "Content-Type, Authorization"
+            };
 
-  // Якщо запит є OPTIONS (preflight запит для CORS), повертаємо тільки заголовки
-  if (event.httpMethod === 'OPTIONS') {
-    return {
-      statusCode: 200,
-      headers: headers
-    };
-  }
+            if (event.httpMethod === 'OPTIONS') {
+                return {
+                    statusCode: 200,
+                    headers: headers
+                };
+            }
 
-  // Отримуємо дані з тіла запиту
-  const { amount, tokenType, walletAddress } = JSON.parse(event.body);
+            const { amount, tokenType, walletAddress } = JSON.parse(event.body);
 
-  if (!amount || !tokenType || !walletAddress) {
-    return {
-      statusCode: 400,
-      body: JSON.stringify({ error: 'Missing required parameters' }),
-      headers: headers
-    };
-  }
+            if (!amount || !tokenType || !walletAddress) {
+                return {
+                    statusCode: 400,
+                    body: JSON.stringify({ error: 'Missing required parameters' }),
+                    headers: headers
+                };
+            }
 
-  try {
-    // Створюємо транзакцію для переведення
-    const transaction = new Transaction();
+            try {
+                const transaction = new Transaction();
 
-    let tokenMintAddress;
-    if (tokenType === "USDT") {
-      tokenMintAddress = USDT_MINT_ADDRESS;
-    } else if (tokenType === "USDC") {
-      tokenMintAddress = USDC_MINT_ADDRESS;
-    } else {
-      return {
-        statusCode: 400,
-        body: JSON.stringify({ error: 'Unsupported token type' }),
-        headers: headers
-      };
-    }
+                let tokenMintAddress;
+                if (tokenType === "USDT") {
+                    tokenMintAddress = USDT_MINT_ADDRESS;
+                } else if (tokenType === "USDC") {
+                    tokenMintAddress = USDC_MINT_ADDRESS;
+                } else {
+                    return {
+                        statusCode: 400,
+                        body: JSON.stringify({ error: 'Unsupported token type' }),
+                        headers: headers
+                    };
+                }
 
-    // Отримуємо токен-аккаунт для переведення
-    const token = new Token(connection, tokenMintAddress, TOKEN_PROGRAM_ID, serviceWallet);
+                const token = new Token(connection, tokenMintAddress, TOKEN_PROGRAM_ID, serviceWallet);
+                const fromTokenAccount = await token.getOrCreateAssociatedAccountInfo(serviceWallet.publicKey);
+                const toTokenAccount = await token.getOrCreateAssociatedAccountInfo(new PublicKey(walletAddress));
 
-    // Отримуємо обліковий запис для токену
-    const fromTokenAccount = await token.getOrCreateAssociatedAccountInfo(serviceWallet.publicKey);
-    const toTokenAccount = await token.getOrCreateAssociatedAccountInfo(new PublicKey(walletAddress));
+                const transferTransaction = Token.createTransferInstruction(
+                    TOKEN_PROGRAM_ID,
+                    fromTokenAccount.address,
+                    toTokenAccount.address,
+                    serviceWallet.publicKey,
+                    [],
+                    amount * 1_000_000
+                );
 
-    // Створюємо операцію для переведення токенів SPL
-    const transferTransaction = Token.createTransferInstruction(
-      TOKEN_PROGRAM_ID,
-      fromTokenAccount.address,
-      toTokenAccount.address,
-      serviceWallet.publicKey,
-      [],
-      amount * 1_000_000  // Припускаємо, що 1 USDT або 1 USDC = 1_000_000 lamports (1 токен)
-    );
+                transaction.add(transferTransaction);
 
-    // Додаємо операцію до транзакції
-    transaction.add(transferTransaction);
+                const signature = await connection.sendTransaction(transaction, [serviceWallet]);
 
-    // Підписуємо транзакцію
-    const signature = await connection.sendTransaction(transaction, [serviceWallet]);
-
-    return {
-      statusCode: 200,
-      body: JSON.stringify({ success: true, txid: signature }),
-      headers: headers
-    };
-  } catch (error) {
-    return {
-      statusCode: 500,
-      body: JSON.stringify({ error: error.message }),
-      headers: headers
-    };
-  }
-
-};
+                return {
+                    statusCode: 200,
+                    body: JSON.stringify({ success: true, txid: signature }),
+                    headers: headers
+                };
+            } catch (error) {
+                return {
+                    statusCode: 500,
+                    body: JSON.stringify({ error: error.message }),
+                    headers: headers
+                };
+            }
+        };
     </script>
 </body>
 </html>
