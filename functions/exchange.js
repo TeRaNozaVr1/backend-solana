@@ -1,6 +1,5 @@
-// netlify/functions/exchange.js
-
-const { Connection, PublicKey, Keypair, Transaction, SystemProgram } = require('@solana/web3.js');
+const { Connection, PublicKey, Keypair, Transaction } = require('@solana/web3.js');
+const { TOKEN_PROGRAM_ID, Token } = require('@solana/spl-token');
 
 // Підключення до Solana через Ankr
 const SOLANA_RPC_URL = "https://rpc.ankr.com/solana";  // Використовуємо Ankr для підключення до Solana
@@ -16,13 +15,29 @@ const USDC_MINT_ADDRESS = new PublicKey("Es9vMFrzrQZsjAFVUtzz5N7Z9WhwZ1x7pH2aVtt
 const TOKEN_ACCOUNT = new PublicKey("4ofLfgCmaJYC233vTGv78WFD4AfezzcMiViu26dF3cVU"); // Ваш токен-аккаунт
 
 exports.handler = async (event, context) => {
+  // Встановлюємо CORS заголовки
+  const headers = {
+    "Access-Control-Allow-Origin": "https://yaroslavs-marvelous-site-76b7ab.webflow.io",  // Дозволяє доступ з будь-якої доменної зони
+    "Access-Control-Allow-Methods": "GET, POST, OPTIONS",  // Дозволяє запити GET, POST та OPTIONS
+    "Access-Control-Allow-Headers": "Content-Type, Authorization"  // Дозволяє вказані заголовки
+  };
+
+  // Якщо запит є OPTIONS (preflight запит для CORS), повертаємо тільки заголовки
+  if (event.httpMethod === 'OPTIONS') {
+    return {
+      statusCode: 200,
+      headers: headers
+    };
+  }
+
   // Отримуємо дані з тіла запиту
   const { amount, tokenType } = JSON.parse(event.body);
 
   if (!amount || !tokenType) {
     return {
       statusCode: 400,
-      body: JSON.stringify({ error: 'Missing required parameters' })
+      body: JSON.stringify({ error: 'Missing required parameters' }),
+      headers: headers
     };
   }
 
@@ -30,25 +45,36 @@ exports.handler = async (event, context) => {
     // Створюємо транзакцію для переведення
     const transaction = new Transaction();
 
-    let tokenToSend;
+    let tokenMintAddress;
     if (tokenType === "USDT") {
-      tokenToSend = USDT_MINT_ADDRESS;
+      tokenMintAddress = USDT_MINT_ADDRESS;
     } else if (tokenType === "USDC") {
-      tokenToSend = USDC_MINT_ADDRESS;
+      tokenMintAddress = USDC_MINT_ADDRESS;
     } else {
       return {
         statusCode: 400,
-        body: JSON.stringify({ error: 'Unsupported token type' })
+        body: JSON.stringify({ error: 'Unsupported token type' }),
+        headers: headers
       };
     }
 
-    // Створюємо операцію для переведення
-    const transferTransaction = SystemProgram.transfer({
-      fromPubkey: serviceWallet.publicKey,
-      toPubkey: TOKEN_ACCOUNT,
-      lamports: amount * 1_000_000  // Припускаємо, що 1 USDT = 1_000_000 lamports
-    });
+    // Отримуємо токен-аккаунт для переведення
+    const token = new Token(connection, tokenMintAddress, TOKEN_PROGRAM_ID, serviceWallet);
 
+    // Отримуємо обліковий запис для токену
+    const fromTokenAccount = await token.getOrCreateAssociatedAccountInfo(serviceWallet.publicKey);
+
+    // Створюємо операцію для переведення токенів SPL
+    const transferTransaction = Token.createTransferInstruction(
+      TOKEN_PROGRAM_ID,
+      fromTokenAccount.address,
+      TOKEN_ACCOUNT,
+      serviceWallet.publicKey,
+      [],
+      amount * 1_000_000  // Припускаємо, що 1 USDT або 1 USDC = 1_000_000 lamports (1 токен)
+    );
+
+    // Додаємо операцію до транзакції
     transaction.add(transferTransaction);
 
     // Підписуємо транзакцію
@@ -56,12 +82,14 @@ exports.handler = async (event, context) => {
 
     return {
       statusCode: 200,
-      body: JSON.stringify({ success: true, txid: signature })
+      body: JSON.stringify({ success: true, txid: signature }),
+      headers: headers
     };
   } catch (error) {
     return {
       statusCode: 500,
-      body: JSON.stringify({ error: error.message })
+      body: JSON.stringify({ error: error.message }),
+      headers: headers
     };
   }
 };
